@@ -11,10 +11,324 @@
   function openDialog(html){content.innerHTML=html;dialog.showModal();content.scrollTop=0;}
   function closeDialog(){dialog.close();}
   function markDone(id){completed.add(id);localStorage.setItem('cv_completed',JSON.stringify([...completed]));updateProgress();}
-  function quiz(){quizAnswers={};const qs=[['q1','Si tu pareja exige revisar tu teléfono para demostrar amor, ¿qué indica?',['Es una prueba normal de cariño','Puede ser una señal de control','Debo aceptar para evitar una discusión'],1],['q2','Una oferta laboral te pide pagar por adelantado para asegurar la vacante. ¿Qué haces?',['Pago si prometen buen sueldo','Comparto mis documentos de inmediato','Me detengo, verifico la oferta y no pago'],2],['q3','Una amiga te cuenta que siente miedo de su pareja. ¿Cómo puedes apoyarla?',['La escucho sin juzgar y le pregunto qué necesita','La obligo a terminar inmediatamente','Publico su historia para pedir ayuda'],0]];
-    openDialog(`<p class="eyebrow">TU PUNTO DE PARTIDA</p><h2>Quiz de aprendizaje</h2><p>Son tres preguntas breves. No hay datos personales ni respuestas asociadas a tu identidad.</p><form id="quizForm">${qs.map((q,i)=>`<fieldset class="quiz-field"><legend><b>${i+1}. ${q[1]}</b></legend>${q[2].map((a,j)=>`<label class="quiz-option"><input type="radio" name="${q[0]}" value="${j}" required> ${a}</label>`).join('')}</fieldset>`).join('')}<button class="btn btn-primary" type="submit">Ver mis resultados →</button></form>`);
-    $('#quizForm').addEventListener('submit',e=>{e.preventDefault();let score=0;qs.forEach(q=>{if(Number(new FormData(e.target).get(q[0]))===q[3])score++;});openDialog(`<p class="eyebrow">RESULTADO</p><h2>${score===3?'¡Excelente intuición!':score===2?'Vas por buen camino':'Este es un buen lugar para aprender'}</h2><p>Respondiste correctamente <b>${score} de ${qs.length}</b> preguntas.</p><div class="feedback">${score===3?'Reconoces señales importantes y opciones de apoyo. Sigue confiando en tus límites.':'Explora los módulos para conocer más sobre control, seguridad digital y apoyo sin juicios. No necesitas saberlo todo de antemano.'}</div><button class="btn btn-primary" id="quizContinue">Ir a los módulos →</button>`);$('#quizContinue').onclick=()=>{closeDialog();$('#ruta').scrollIntoView({behavior:'smooth'});};});
+  function quiz() {
+  const questions = [
+    {
+      q: "¿Cuál es una señal de control en una relación?",
+      o: [
+        "Respetar las decisiones",
+        "Exigir contraseñas",
+        "Escuchar opiniones",
+        "Respetar amistades"
+      ],
+      a: 1,
+      e: "Exigir contraseñas vulnera la privacidad."
+    },
+    {
+      q: "¿Qué caracteriza a una relación respetuosa?",
+      o: [
+        "Vigilancia constante",
+        "Aislamiento",
+        "Respeto de límites",
+        "Control de horarios"
+      ],
+      a: 2,
+      e: "El respeto incluye autonomía y confianza."
+    },
+    {
+      q: "¿Qué hacer ante una oferta laboral sospechosa?",
+      o: [
+        "Pagar inmediatamente",
+        "Enviar documentos",
+        "Acudir sin verificar",
+        "Verificar la empresa"
+      ],
+      a: 3,
+      e: "Verificar por canales oficiales ayuda a prevenir fraudes."
+    },
+    {
+      q: "¿Cuál es una buena práctica de seguridad digital?",
+      o: [
+        "Activar verificación en dos pasos",
+        "Compartir claves",
+        "Reutilizar contraseñas",
+        "Abrir enlaces desconocidos"
+      ],
+      a: 0,
+      e: "La verificación en dos pasos añade protección."
+    },
+    {
+      q: "¿Cómo expresar un límite personal?",
+      o: [
+        "Aceptar por presión",
+        "Responder con claridad",
+        "Ignorar las propias necesidades",
+        "Ceder siempre"
+      ],
+      a: 1,
+      e: "Comunicar límites ayuda a expresar lo que aceptamos."
+    },
+    {
+      q: "¿Cómo apoyar a una amiga que siente miedo?",
+      o: [
+        "Publicar su historia",
+        "Decidir por ella",
+        "Escuchar sin juzgar",
+        "Confrontar a terceros"
+      ],
+      a: 2,
+      e: "Escuchar y ofrecer apoyo respeta su autonomía."
+    },
+    {
+      q: "¿Qué indica el aislamiento impuesto de amistades?",
+      o: [
+        "Confianza",
+        "Comunicación sana",
+        "Respeto",
+        "Posible señal de control"
+      ],
+      a: 3,
+      e: "Impedir relaciones sociales puede ser una señal de control."
+    },
+    {
+      q: "¿Qué hacer si recibes un enlace sospechoso?",
+      o: [
+        "Verificar antes de abrir",
+        "Compartirlo",
+        "Ingresar contraseñas",
+        "Descargar archivos"
+      ],
+      a: 0,
+      e: "Verificar enlaces y remitentes reduce riesgos digitales."
+    },
+    {
+      q: "¿Qué caracteriza a una red de apoyo?",
+      o: [
+        "Personas que imponen decisiones",
+        "Personas confiables que escuchan",
+        "Personas que difunden secretos",
+        "Personas que exigen explicaciones"
+      ],
+      a: 1,
+      e: "Una red de apoyo escucha y respeta las decisiones."
+    },
+    {
+      q: "¿Cuál es el propósito de Código Violeta?",
+      o: [
+        "Controlar decisiones",
+        "Recopilar datos personales",
+        "Fortalecer conocimientos preventivos",
+        "Reemplazar servicios de emergencia"
+      ],
+      a: 2,
+      e: "Código Violeta ofrece educación preventiva y orientación."
+    }
+  ];
+
+  const key = "cv_quiz_initial_v2";
+  let initial = null;
+
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved !== null) {
+      const parsed = JSON.parse(saved);
+      if (
+        Number.isInteger(parsed) &&
+        parsed >= 0 &&
+        parsed <= 10
+      ) {
+        initial = parsed;
+      }
+    }
+  } catch (error) {
+    console.warn("No se pudo leer el resultado inicial.", error);
   }
+
+  const phase = initial === null ? "inicial" : "final";
+  let current = 0;
+  const answers = Array(questions.length).fill(null);
+
+  function renderQuestion() {
+    const item = questions[current];
+    const progress = Math.round(
+      (current / questions.length) * 100
+    );
+
+    openDialog(`
+      <p class="eyebrow">
+        EVALUACIÓN ${phase.toUpperCase()}
+      </p>
+
+      <h2>Quiz Código Violeta 💜</h2>
+
+      <p>
+        Pregunta ${current + 1} de ${questions.length}
+      </p>
+
+      <div class="progress-track">
+        <div style="width:${progress}%"></div>
+      </div>
+
+      <form id="cvQuizForm">
+        <fieldset class="quiz-field">
+          <legend><b>${item.q}</b></legend>
+
+          ${item.o.map((option, index) => `
+            <label class="quiz-option">
+              <input
+                type="radio"
+                name="answer"
+                value="${index}"
+                required
+                ${answers[current] === index ? "checked" : ""}
+              >
+              ${option}
+            </label>
+          `).join("")}
+        </fieldset>
+
+        <button class="btn btn-primary" type="submit">
+          ${
+            current === questions.length - 1
+              ? "Finalizar evaluación"
+              : "Siguiente pregunta →"
+          }
+        </button>
+      </form>
+    `);
+
+    $("#cvQuizForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      const data = new FormData(event.currentTarget);
+      const value = data.get("answer");
+
+      if (value === null) return;
+
+      answers[current] = Number(value);
+      current++;
+
+      if (current < questions.length) {
+        renderQuestion();
+      } else {
+        showResults();
+      }
+    });
+  }
+
+  function showResults() {
+    const score = questions.reduce(
+      (total, question, index) =>
+        total + (answers[index] === question.a ? 1 : 0),
+      0
+    );
+
+    const percentage = Math.round(
+      (score / questions.length) * 100
+    );
+
+    if (phase === "inicial") {
+      try {
+        localStorage.setItem(key, JSON.stringify(score));
+      } catch (error) {
+        console.warn("No se pudo guardar el resultado.", error);
+      }
+    }
+
+    const comparison =
+      phase === "final" && initial !== null
+        ? `
+          <div class="feedback">
+            <h3>Comparación de aprendizaje</h3>
+
+            <p>
+              Evaluación inicial:
+              <b>${initial}/10</b>
+            </p>
+
+            <p>
+              Evaluación final:
+              <b>${score}/10</b>
+            </p>
+
+            <p>
+              Diferencia:
+              <b>
+                ${score - initial > 0 ? "+" : ""}
+                ${score - initial} puntos
+              </b>
+            </p>
+          </div>
+        `
+        : "";
+
+    const feedback = questions.map((question, index) => `
+      <div class="feedback">
+        <b>${index + 1}. ${question.q}</b>
+
+        <p>
+          ${
+            answers[index] === question.a
+              ? "✓ Respuesta correcta"
+              : "Respuesta para revisar"
+          }
+        </p>
+
+        <p>
+          <b>Respuesta esperada:</b>
+          ${question.o[question.a]}
+        </p>
+
+        <p>${question.e}</p>
+      </div>
+    `).join("");
+
+    openDialog(`
+      <p class="eyebrow">
+        RESULTADOS · EVALUACIÓN ${phase.toUpperCase()}
+      </p>
+
+      <h2>¡Tu aprendizaje cuenta! 💜</h2>
+
+      <p>
+        Obtuviste
+        <b>${score} de ${questions.length}</b>
+        respuestas correctas.
+      </p>
+
+      <div class="progress-track">
+        <div style="width:${percentage}%"></div>
+      </div>
+
+      <p>
+        <b>${percentage}% de respuestas correctas</b>
+      </p>
+
+      ${comparison}
+
+      <h3>Retroalimentación</h3>
+
+      ${feedback}
+
+      <button
+        class="btn btn-primary"
+        id="cvQuizFinish"
+      >
+        Continuar mi ruta →
+      </button>
+    `);
+
+    $("#cvQuizFinish").onclick = () => {
+      closeDialog();
+
+      $("#ruta").scrollIntoView({
+        behavior: "smooth"
+      });
+    };
+  }
+
+  renderQuestion();
+}
   const moduleContent={
     signals:{intro:'El control no es una prueba de amor. Observa cómo te hace sentir una situación y si respeta tus decisiones.',case:'Tu pareja te dice: “Si me quisieras, dejarías de hablar con tus amistades y me darías tu contraseña”.',choices:[['Aceptar para evitar problemas','Aceptar por miedo no resuelve el control. Tus cuentas, amistades y decisiones merecen privacidad.'],['Explicar que tu privacidad y amistades importan','Es una respuesta que establece un límite. Si temes una reacción, prioriza tu seguridad y busca apoyo.'],['Pedir consejo a una persona de confianza','Buscar una perspectiva segura puede ayudarte a pensar opciones sin presión.']],tip:'Señales de alerta: aislamiento, vigilancia, amenazas, humillaciones, culpa constante o presión para hacer algo que no quieres.'},
     digital:{intro:'Tu seguridad digital empieza por pequeñas decisiones. Nadie tiene derecho a amenazarte ni a compartir contenido íntimo sin consentimiento.',case:'Una cuenta te amenaza con publicar mensajes privados si no envías más imágenes.',choices:[['Enviar más contenido para que se detenga','Puede aumentar el control. No tienes que obedecer amenazas ni negociar a solas.'],['No responder impulsivamente; guardar evidencia y buscar apoyo','Una opción más segura: conserva mensajes y enlaces si puedes hacerlo sin riesgo, bloquea/reporta cuando sea seguro y pide apoyo.'],['Compartir la contraseña para demostrar confianza','Compartir contraseñas no detiene el chantaje y aumenta el acceso a tus cuentas.']],tip:'Activa verificación en dos pasos, usa contraseñas únicas y revisa sesiones abiertas. Si guardar pruebas te pone en riesgo, prioriza tu seguridad.'},
